@@ -12,28 +12,53 @@
 #include <networktables/NetworkTable.h>
 #include <ctre/Phoenix.h>
 #include "rev/CANSparkMax.h"
-#include <atomic>
 
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <arpa/inet.h> // FRC ROBOTS SUPPORT THE LINUX FRAMEWORK
+#include <arpa/inet.h> // FRC ROBOTS SUPPORT THE LINUX KERNEL COMMANDS
 
 #include <frc/Joystick.h>
-#include <frc/RobotBase.h>
+#include <stdio.h>
 #include <unistd.h>
 
-class SingleServer{ // Skeleton class that does not handle data. This one only accepts a single client at a time!
-    struct sockaddr_in serveraddress;
-    int serverfd;
-    struct sockaddr clientaddress;
+#include "ModularRobot.hpp"
+#include "c_str_man.hpp"
+
+enum ServerCommand{
+
+};
+
+enum ServerResponse{
+
+};
+
+class SingleClientCommandServer : public Module{ // Skeleton class that does not handle data. This one only accepts a single client at a time!
+    struct sockaddr_in serveraddress; // Address of the server
+    int serverfd; // File descriptor of the server
+    struct sockaddr clientaddress; // Guess!
     int clientfd;
+    ServerResponse (*GotCommandCallback)(ServerCommand);
 public:
-    SingleServer(int port){ // All servers bind to every address via INADDR_ANY, so no need for an address field
+    SingleClientCommandServer(int port, ServerResponse (*gotCommandCallback)(ServerCommand)){ // All servers bind to every address via INADDR_ANY, so no need for an address field. The second thing is a function pointer - Google It!
+        GotCommandCallback = gotCommandCallback;
+        memset(&serveraddress, 0, sizeof(serveraddress)); // Memset is a system-call that writes a value repetitively to memory. Because memory is often full of random bits (for some reason), use this to keep life the universe and everything from imploding.
+        memset(&clientaddress, 0, sizeof(clientaddress)); // Not necessary but I'm a perfectionist
+
+        serveraddress.sin_family = AF_INET; // IPv4
+        serveraddress.sin_addr.s_addr = INADDR_ANY; // Every bindable address
+        serveraddress.sin_port = htons(port);
+
+        serverfd = socket(AF_INET, SOCK_STREAM, 0); // New socket following the AF_INET internet protocol, the SOCK_STREAM (TCP) transfer protocol, and with 0 flags
+        bind(serverfd, (struct sockaddr*) &serveraddress, sizeof(serveraddress)); // Bind the server socket to the server address
+        listen(serverfd, 25); // The socket will keep 25 incoming connections in queue until it tosses them out. This is a bad coding practice for a single-client-at-a-time server, but I want to be safe.
+    }
+    void run(){ // Receive data
 
     }
 };
 
-class Robot : public frc::RobotBase{
+
+class Robot : public ModularRobot{
 private:
     std::atomic<bool> m_exit{false}; // Multithreaded variable. This is why the code doesn't die!
     rev::CANSparkMax DriveLeft{11,rev::CANSparkMax::MotorType::kBrushless};
@@ -55,90 +80,28 @@ private:
 
 public:
     Robot(){
+        //HAL_SendConsoleLine("This is a console line");
+        setData("Becky", "Firestorm Robotics", 6341);
     }
 
-    void RobotInit() {
+    void Init(){
         DriveLeftSlave.Follow(DriveLeft);
         DriveRightSlave.Follow(DriveRight);
     }
 
-    void Loop(){ // Mainloop
-
+    void TeleopLoop(){
+        HAL_SendConsoleLine(inttostring(Controls.GetX()));
+        usleep(2000000);
     }
 
-    void DisabledMode() {}
-
-    void AutonomousMode() {}
-
-    void TeleopMode() {
-        DriveRight.Set(0);
-        DriveLeft.Set(0);
-    }
-
-    void TestMode() {
+    void BeginTest(){
         DriveLeft.Set(0.2);
         DriveRight.Set(0.2);
     }
 
-    void StartCompetition() {
-        auto& lw = *frc::LiveWindow::GetInstance();
-
-        /* A little socket server! This is basically to replace the horrible, awful, ugly, mean, stinky-poo, totally un-happy FRC shuffleboard.
-        struct sockaddr_in serveraddress;
-        int serversocket;
-        struct sockaddr clientaddress;
-        int clientsocket;
-
-        memset(&serveraddress,0,sizeof(serveraddress));
-        serveraddress.sin_family = AF_INET;
-        serveraddress.sin_addr.s_addr = INADDR_ANY;
-        serveraddress.sin_port = htons(8080);
-        serversocket = socket(AF_INET, SOCK_STREAM, 0);
-        bind(serversocket, (struct sockaddr*) &serveraddress, sizeof(serveraddress));
-        listen(serversocket, 13);
-
-        unsigned int size = sizeof(clientaddress);
-        clientsocket = accept(serversocket, (struct sockaddr*) &clientaddress, &size);
-        char data[1030];
-        recv(clientsocket, data, 1024, 0);
-        send(clientsocket, data, 1024, 0); // Echo server, runs before the RIO does anything.*/
-        RobotInit();
-
-        // Tell the DS that the robot is ready to be enabled
-        HAL_ObserveUserProgramStarting();
-
-        HAL_SendConsoleLine("Becky (FRC 6341) operational, begin mainloop");
-        while (!m_exit){ // Restructured from the old uglies. This one gives easy-peasy mainlooping without our ugly-mugly turdy-purdy stinky-winky infinite while loop
-            Loop(); // General mainloop
-            if (IsDisabled() && !(mode == 0)){ // Disabled tasks
-                HAL_ObserveUserProgramDisabled();
-                HAL_SendConsoleLine("Running disabled mode tasks")
-                DisabledMode();
-                mode = 0;
-            }
-            else if (IsAutonomous() && !(mode == 1)){ // Autonomous tasks
-                HAL_ObserveUserProgramAutonomous();
-                HAL_SendConsoleLine("Running autonomous mode tasks")
-                AutonomousMode();
-                mode = 1;
-            }
-            else if (IsTest() && !(mode == 2)){ // Test tasks
-                HAL_ObserveUserProgramTest();
-                HAL_SendConsoleLine("Running test mode tasks")
-                TestMode();
-                mode = 2;
-            }
-            else if (!mode == 3){ // Teleop tasks
-                HAL_ObserveUserProgramTeleop();
-                HAL_SendConsoleLine("Running teleop mode tasks")
-                TeleopMode();
-                mode = 3;
-            }
-        }
-    }
-
-    void EndCompetition() {
-        m_exit = true;
+    void CleanUpTest(){
+        DriveLeft.Set(0);
+        DriveRight.Set(0);
     }
 };
 

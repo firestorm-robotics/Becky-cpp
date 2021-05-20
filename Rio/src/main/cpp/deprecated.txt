@@ -1,0 +1,62 @@
+Just a bunch of "deleted" code chunks. To be used for nothing (probably) - this is effectively a garbage heap.
+
+
+
+:
+void StartCompetition() {
+    auto& lw = *frc::LiveWindow::GetInstance();
+
+    /* A little socket server! This is basically to replace the horrible, awful, ugly, mean, stinky-poo, totally un-happy FRC shuffleboard.
+    struct sockaddr_in serveraddress;
+    int serversocket;
+    struct sockaddr clientaddress;
+    int clientsocket;
+
+    memset(&serveraddress,0,sizeof(serveraddress));
+    serveraddress.sin_family = AF_INET;
+    serveraddress.sin_addr.s_addr = INADDR_ANY;
+    serveraddress.sin_port = htons(8080);
+    serversocket = socket(AF_INET, SOCK_STREAM, 0);
+    bind(serversocket, (struct sockaddr*) &serveraddress, sizeof(serveraddress));
+    listen(serversocket, 13);
+
+    unsigned int size = sizeof(clientaddress);
+    clientsocket = accept(serversocket, (struct sockaddr*) &clientaddress, &size);
+    char data[1030];
+    recv(clientsocket, data, 1024, 0);
+    send(clientsocket, data, 1024, 0); // Echo server, runs before the RIO does anything.*/
+    RobotInit();
+
+    // Tell the DS that the robot is ready to be enabled
+    HAL_ObserveUserProgramStarting();
+
+    HAL_SendConsoleLine("Becky (FRC 6341) operational, begin mainloop");
+    while (!m_exit){ // Restructured from the old uglies. This one gives easy-peasy mainlooping without our ugly-mugly turdy-purdy stinky-winky infinite while loop
+        Loop(); // General mainloop
+        if (IsDisabled() && !(mode == 0)){ // Disabled tasks
+            HAL_ObserveUserProgramDisabled();
+            HAL_SendConsoleLine("Running disabled mode tasks");
+            DisabledMode();
+            mode = 0;
+        }
+        else if (IsAutonomous() && !(mode == 1)){ // Autonomous tasks
+            HAL_ObserveUserProgramAutonomous();
+            HAL_SendConsoleLine("Running autonomous mode tasks");
+            AutonomousMode();
+            mode = 1;
+        }
+        else if (IsTest() && !(mode == 2)){ // Test tasks
+            HAL_ObserveUserProgramTest();
+            HAL_SendConsoleLine("Running test mode tasks");
+            TestMode();
+            mode = 2;
+        }
+        else if (!(mode == 3)){ // Teleop tasks
+            HAL_ObserveUserProgramTeleop();
+            HAL_SendConsoleLine("Running teleop mode tasks");
+            TeleopMode();
+            mode = 3;
+        }
+    }
+}*/
+:
